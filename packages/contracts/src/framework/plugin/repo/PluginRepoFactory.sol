@@ -53,57 +53,12 @@ contract PluginRepoFactory {
         bytes memory _buildMetadata
     ) external returns (PluginRepo pluginRepo) {
         // Sets `address(this)` as initial owner which is later replaced with the maintainer address.
-        pluginRepo = _createPluginRepo(_subdomain, address(this));
+        pluginRepo = _createPluginRepo(_subdomain, _maintainer);
 
         pluginRepo.createVersion(1, _pluginSetup, _buildMetadata, _releaseMetadata);
-
-        // Setup permissions and transfer ownership from `address(this)` to `_maintainer`.
-        _setPluginRepoPermissions(pluginRepo, _maintainer);
     }
 
-    /// @notice Set the final permissions for the published plugin repository maintainer. All permissions are revoked from the plugin factory and granted to the specified plugin maintainer.
-    /// @param pluginRepo The plugin repository instance just created.
-    /// @param maintainer The plugin maintainer address.
-    /// @dev The plugin maintainer is granted the `MAINTAINER_PERMISSION_ID`, `UPGRADE_REPO_PERMISSION_ID`, and `ROOT_PERMISSION_ID`.
-    function _setPluginRepoPermissions(PluginRepo pluginRepo, address maintainer) internal {
-        // Set permissions on the `PluginRepo`s `PermissionManager`
-        PermissionLib.SingleTargetPermission[]
-            memory items = new PermissionLib.SingleTargetPermission[](5);
 
-        bytes32 rootPermissionID = pluginRepo.ROOT_PERMISSION_ID();
-        bytes32 maintainerPermissionID = pluginRepo.MAINTAINER_PERMISSION_ID();
-
-        // Grant the plugin maintainer all the permissions required
-        items[0] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Grant,
-            maintainer,
-            maintainerPermissionID
-        );
-        items[1] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Grant,
-            maintainer,
-            pluginRepo.UPGRADE_REPO_PERMISSION_ID()
-        );
-        items[2] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Grant,
-            maintainer,
-            rootPermissionID
-        );
-
-        // Revoke permissions from the plugin repository factory (`address(this)`).
-        items[3] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Revoke,
-            address(this),
-            rootPermissionID
-        );
-        items[4] = PermissionLib.SingleTargetPermission(
-            PermissionLib.Operation.Revoke,
-            address(this),
-            maintainerPermissionID
-        );
-
-        pluginRepo.applySingleTargetPermissions(address(pluginRepo), items);
-    }
 
     /// @notice Internal method creating a `PluginRepo` via the [ERC-1967](https://eips.ethereum.org/EIPS/eip-1967) proxy pattern from the provided base contract and registering it in the Aragon plugin registry.
     /// @param _subdomain The plugin repository subdomain.

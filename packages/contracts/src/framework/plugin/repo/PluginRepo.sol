@@ -121,6 +121,7 @@ contract PluginRepo is
         __PermissionManager_init(initialOwner);
 
         _grant(address(this), initialOwner, MAINTAINER_PERMISSION_ID);
+        _grant(address(this), initialOwner, UPGRADE_REPO_PERMISSION_ID);
     }
 
     /// @inheritdoc IPluginRepo
@@ -130,6 +131,15 @@ contract PluginRepo is
         bytes calldata _buildMetadata,
         bytes calldata _releaseMetadata
     ) external auth(MAINTAINER_PERMISSION_ID) {
+        _createVersion(_release, _pluginSetup, _buildMetadata, _releaseMetadata);
+    }
+
+    function _createVersion(
+        uint8 _release,
+        address _pluginSetup,
+        bytes calldata _buildMetadata,
+        bytes calldata _releaseMetadata
+    ) internal {
         if (!_pluginSetup.supportsInterface(type(IPluginSetup).interfaceId)) {
             revert InvalidPluginSetupInterface();
         }
