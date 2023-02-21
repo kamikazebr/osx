@@ -117,11 +117,21 @@ contract PluginRepo is
     /// - initializing the permission manager
     /// - granting the `MAINTAINER_PERMISSION_ID` permission to the initial owner.
     /// @dev This method is required to support [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822).
-    function initialize(address initialOwner) external initializer {
+    function initialize(
+        address initialOwner,
+        uint8 _release,
+        address _pluginSetup,
+        bytes calldata _buildMetadata,
+        bytes calldata _releaseMetadata
+    ) external initializer {
         __PermissionManager_init(initialOwner);
 
         _grant(address(this), initialOwner, MAINTAINER_PERMISSION_ID);
         _grant(address(this), initialOwner, UPGRADE_REPO_PERMISSION_ID);
+
+        if (_release != 0) {
+            _createVersion(_release, _pluginSetup, _buildMetadata, _releaseMetadata);
+        }
     }
 
     /// @inheritdoc IPluginRepo

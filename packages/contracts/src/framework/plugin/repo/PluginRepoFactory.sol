@@ -35,7 +35,7 @@ contract PluginRepoFactory {
         string calldata _subdomain,
         address _initialOwner
     ) external returns (PluginRepo) {
-        return _createPluginRepo(_subdomain, _initialOwner);
+        return _createPluginRepo(_subdomain, _initialOwner, 0, address(0), "", "");
     }
 
     /// @notice Creates and registers a `PluginRepo` with an ENS subdomain and publishes an initial version `1.0`.
@@ -49,23 +49,32 @@ contract PluginRepoFactory {
         string calldata _subdomain,
         address _pluginSetup,
         address _maintainer,
-        bytes memory _releaseMetadata,
-        bytes memory _buildMetadata
+        bytes calldata _releaseMetadata,
+        bytes calldata _buildMetadata
     ) external returns (PluginRepo pluginRepo) {
         // Sets `address(this)` as initial owner which is later replaced with the maintainer address.
-        pluginRepo = _createPluginRepo(_subdomain, _maintainer);
+        pluginRepo = _createPluginRepo(
+            _subdomain,
+            _maintainer,
+            1,
+            _pluginSetup,
+            _buildMetadata,
+            _releaseMetadata
+        );
 
         pluginRepo.createVersion(1, _pluginSetup, _buildMetadata, _releaseMetadata);
     }
-
-
 
     /// @notice Internal method creating a `PluginRepo` via the [ERC-1967](https://eips.ethereum.org/EIPS/eip-1967) proxy pattern from the provided base contract and registering it in the Aragon plugin registry.
     /// @param _subdomain The plugin repository subdomain.
     /// @param _initialOwner The initial owner address.
     function _createPluginRepo(
         string calldata _subdomain,
-        address _initialOwner
+        address _initialOwner,
+        uint8 _release,
+        address _pluginSetup,
+        bytes memory _buildMetadata,
+        bytes memory _releaseMetadata
     ) internal returns (PluginRepo pluginRepo) {
         if (!(bytes(_subdomain).length > 0)) {
             revert EmptyPluginRepoSubdomain();
@@ -74,7 +83,14 @@ contract PluginRepoFactory {
         pluginRepo = PluginRepo(
             createERC1967Proxy(
                 pluginRepoBase,
-                abi.encodeWithSelector(PluginRepo.initialize.selector, _initialOwner)
+                abi.encodeWithSelector(
+                    PluginRepo.initialize.selector,
+                    _initialOwner,
+                    _release,
+                    _pluginSetup,
+                    _buildMetadata,
+                    _releaseMetadata
+                )
             )
         );
 
