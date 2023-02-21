@@ -115,12 +115,46 @@ contract PluginRepo is
 
     /// @notice Initializes the contract by
     /// - initializing the permission manager
-    /// - granting the `MAINTAINER_PERMISSION_ID` permission to the initial owner.
+    /// - granting the `MAINTAINER_PERMISSION_ID` permission to the maintainer
+    /// - granting the `UPGRADE_REPO_PERMISSION_ID` permission to the maintainer
+    /// @param _maintainer The plugin maintainer address.
     /// @dev This method is required to support [ERC-1822](https://eips.ethereum.org/EIPS/eip-1822).
-    function initialize(address initialOwner) external initializer {
-        __PermissionManager_init(initialOwner);
+    function initialize(address _maintainer) external initializer {
+        __PluginRepo_init(_maintainer);
+    }
 
-        _grant(address(this), initialOwner, MAINTAINER_PERMISSION_ID);
+    /// @notice Initializes the contract by
+    /// - initializing the permission manager
+    /// - granting the `MAINTAINER_PERMISSION_ID` permission to the maintainer
+    /// - granting the `UPGRADE_REPO_PERMISSION_ID` permission to the maintainer
+    /// - creating the first version
+    /// @param _maintainer The plugin maintainer address.
+    /// @param _pluginSetup The plugin factory contract associated with the plugin version.
+    /// @param _releaseMetadata The release metadata URI.
+    /// @param _buildMetadata The build metadata URI.
+    function initializeAndCreateFirstVersion(
+        address _maintainer,
+        address _pluginSetup,
+        bytes calldata _releaseMetadata,
+        bytes calldata _buildMetadata
+    ) external initializer {
+        __PluginRepo_init(_maintainer);
+
+        _grant(address(this), msg.sender, MAINTAINER_PERMISSION_ID);
+        createVersion(1, _pluginSetup, _buildMetadata, _releaseMetadata);
+        _revoke(address(this), msg.sender, MAINTAINER_PERMISSION_ID);
+    }
+
+    /// @notice Internal function initializing the contract by
+    /// - initializing the permission manager
+    /// - granting the `MAINTAINER_PERMISSION_ID` permission to the maintainer
+    /// - granting the `UPGRADE_REPO_PERMISSION_ID` permission to the maintainer
+    /// @param _maintainer The plugin maintainer address.
+    function __PluginRepo_init(address _maintainer) internal onlyInitializing {
+        __PermissionManager_init(_maintainer);
+
+        _grant(address(this), _maintainer, MAINTAINER_PERMISSION_ID);
+        _grant(address(this), _maintainer, UPGRADE_REPO_PERMISSION_ID);
     }
 
     /// @inheritdoc IPluginRepo
@@ -129,7 +163,7 @@ contract PluginRepo is
         address _pluginSetup,
         bytes calldata _buildMetadata,
         bytes calldata _releaseMetadata
-    ) external auth(MAINTAINER_PERMISSION_ID) {
+    ) public auth(MAINTAINER_PERMISSION_ID) {
         if (!_pluginSetup.supportsInterface(type(IPluginSetup).interfaceId)) {
             revert InvalidPluginSetupInterface();
         }
